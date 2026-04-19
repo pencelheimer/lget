@@ -34,12 +34,12 @@ impl Display for License {
             f,
             "{}",
             match self {
-                License::Unlicense => "Unlicense",
-                License::Mit => "MIT",
-                License::GPL3 => "GPL-3.0-only",
-                License::Apache2 => "Apache-2.0",
-                License::BSD3 => "BSD-3-Clause",
-                License::BSD2 => "BSD-2-Clause",
+                Self::Unlicense => "Unlicense",
+                Self::Mit => "MIT",
+                Self::GPL3 => "GPL-3.0-only",
+                Self::Apache2 => "Apache-2.0",
+                Self::BSD3 => "BSD-3-Clause",
+                Self::BSD2 => "BSD-2-Clause",
             }
         )
     }
