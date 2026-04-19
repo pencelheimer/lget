@@ -4,10 +4,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum CliError {
-    #[error("{0}")]
+    #[error(transparent)]
     Io(#[from] IoError),
 
-    #[error("{0}")]
+    #[error(transparent)]
     Net(#[from] ureq::Error),
 
     #[error("Cannot prompt for input in quiet mode. Please provide '--license' explicitly.")]

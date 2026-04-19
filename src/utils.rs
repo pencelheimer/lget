@@ -3,43 +3,41 @@ use std::path::Path;
 use crate::{error::CliError, license::License};
 
 pub fn get_license(license_opt: Option<License>, quiet: bool) -> Result<License, CliError> {
-    let license = match license_opt {
-        Some(license) => license,
-        None => {
-            if quiet {
-                return Err(CliError::QuietNoLicense);
-            }
-
-            cliclack::select("Pick a License")
-                .initial_value(License::Unlicense)
-                .items(License::items().as_ref())
-                .interact()?
-        }
-    };
-
-    Ok(license)
+    match license_opt {
+        Some(license) => Ok(license),
+        None if quiet => Err(CliError::QuietNoLicense),
+        None => cliclack::select("Pick a License")
+            .initial_value(License::Unlicense)
+            .items(License::items().as_ref())
+            .interact()
+            .map_err(Into::into),
+    }
 }
 
 pub fn check_overwrite(path: impl AsRef<Path>, force: bool, quiet: bool) -> Result<(), CliError> {
     let path = path.as_ref();
 
-    if !force && path.exists() {
-        if quiet {
-            return Err(CliError::QuietNeedsForce);
-        }
-
-        let overwrite = cliclack::confirm(format!(
-            "File '{}' already exists. Overwrite?",
-            path.display()
-        ))
-        .interact()?;
-
-        if !overwrite {
-            return Err(CliError::interrupt());
-        }
+    if !path.exists() {
+        return Ok(());
     }
 
-    Ok(())
+    if force {
+        return Ok(());
+    } else if quiet {
+        return Err(CliError::QuietNeedsForce);
+    }
+
+    let overwrite = cliclack::confirm(format!(
+        "File '{}' already exists. Overwrite?",
+        path.display()
+    ))
+    .interact()?;
+
+    if overwrite {
+        Ok(())
+    } else {
+        Err(CliError::interrupt())
+    }
 }
 
 pub fn fetch_and_write(
