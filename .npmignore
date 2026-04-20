@@ -1,0 +1,10 @@
+src/
+assets/
+target/
+tests/
+Cargo.toml
+Cargo.lock
+flake.nix
+flake.lock
+.github/
+.gitignore

@@ -1,1 +1,4 @@
 /target
+
+/npm/bin
+/node_modules
