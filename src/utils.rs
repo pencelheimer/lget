@@ -33,11 +33,11 @@ pub fn check_overwrite(path: impl AsRef<Path>, force: bool, quiet: bool) -> Resu
     ))
     .interact()?;
 
-    if overwrite {
-        Ok(())
-    } else {
-        Err(CliError::interrupt())
+    if !overwrite {
+        return Err(CliError::interrupt());
     }
+
+    Ok(())
 }
 
 pub fn fetch_and_write(
