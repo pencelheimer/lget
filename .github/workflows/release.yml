@@ -49,3 +49,75 @@ jobs:
           file: target/${{ matrix.target }}/release/${{ matrix.name }}
           asset_name: ${{ matrix.name }}
           tag: ${{ github.ref }}
+
+  publish-aur:
+    needs: build
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm git sudo openssh
+
+      - name: Configure SSH for AUR
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+
+          cat >> ~/.ssh/config <<EOF
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+            StrictHostKeyChecking accept-new
+          EOF
+
+      - name: Update PKGBUILD & Regen .SRCINFO
+        run: |
+          cd packaging/aur-bin
+
+          VERSION=${GITHUB_REF_NAME#v}
+          sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
+
+          # NOTE(pencelheimer): give GitHub Releases CDN time to propagate the binary
+          sleep 3
+
+          useradd -m build
+          chown -R build:build .
+
+          sudo -u build updpkgsums
+          sudo -u build makepkg --printsrcinfo > .SRCINFO
+
+      - name: Commit and Push to AUR
+        run: |
+          cd packaging/aur-bin
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add PKGBUILD .SRCINFO
+
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "${GITHUB_REF_NAME}"
+            git push origin master
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Update Submodule Pointer in Main Repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add packaging/aur-bin
+
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "chore(aur-bin): update submodule pointer for ${GITHUB_REF_NAME}"
+            git push origin HEAD:main
+          else
+            echo "No main repo changes to commit."
+          fi
