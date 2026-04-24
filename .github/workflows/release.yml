@@ -50,71 +50,41 @@ jobs:
   publish-aur:
     needs: build
     runs-on: ubuntu-latest
-    container: archlinux:base-devel
     steps:
-      - name: Install dependencies
-        run: pacman -Syu --noconfirm git sudo openssh
-
-      - name: Configure SSH for AUR
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur
-          chmod 600 ~/.ssh/aur
-
-          cat >> ~/.ssh/config <<EOF
-          Host aur.archlinux.org
-            IdentityFile ~/.ssh/aur
-            User aur
-            StrictHostKeyChecking accept-new
-          EOF
-
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           submodules: true
           fetch-depth: 0
 
-      - name: Update PKGBUILD & Regen .SRCINFO
+      - name: Prepare PKGBUILD
         run: |
-          cd packaging/aur-bin
-
           VERSION=${GITHUB_REF_NAME#v}
-          sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
-
-          # NOTE(pencelheimer): give GitHub Releases CDN time to propagate the binary
+          sed -i "s/^pkgver=.*/pkgver=$VERSION/" packaging/aur-bin/PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur-bin/PKGBUILD
           sleep 3
 
-          useradd -m build
-          chown -R build:build .
-
-          sudo -u build updpkgsums
-          sudo -u build makepkg --printsrcinfo > .SRCINFO
-
-      - name: Commit and Push to AUR
-        run: |
-          cd packaging/aur-bin
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add PKGBUILD .SRCINFO
-
-          if ! git diff-index --quiet HEAD; then
-            git commit -m "${GITHUB_REF_NAME}"
-            git push origin master
-          else
-            echo "No changes to commit."
-          fi
+      - name: Publish AUR package
+        uses: KSXGitHub/github-actions-deploy-aur@v3
+        with:
+          pkgname: lget-bin
+          pkgbuild: packaging/aur-bin/PKGBUILD
+          updpkgsums: true
+          commit_username: "pencelheimer"
+          commit_email: "pencelheimer@proton.me"
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "${GITHUB_REF_NAME}"
+          ssh_keyscan_types: ed25519
 
       - name: Update Submodule Pointer in Main Repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add packaging/aur-bin
+          git submodule update --remote packaging/aur-bin
 
+          git add packaging/aur-bin
           if ! git diff-index --quiet HEAD; then
-            git commit -m "chore(aur-bin): update submodule pointer for ${GITHUB_REF_NAME}"
+            git commit -m "chore(aur-bin): sync submodule to ${GITHUB_REF_NAME}"
             git push origin HEAD:main
-          else
-            echo "No main repo changes to commit."
           fi
