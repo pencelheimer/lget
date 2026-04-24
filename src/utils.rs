@@ -1,6 +1,8 @@
 use std::path::Path;
 
-use crate::{error::CliError, license::License};
+use clap::CommandFactory as _;
+
+use crate::{args::CliArgs, error::CliError, license::License};
 
 pub fn get_license(license_opt: Option<License>, quiet: bool) -> Result<License, CliError> {
     match license_opt {
@@ -70,4 +72,12 @@ pub fn fetch_and_write(
     }
 
     Ok(())
+}
+
+pub fn gen_shell_completions(shell: impl clap_complete::Generator) {
+    let mut cmd = CliArgs::command();
+    let bin_name = env!("CARGO_PKG_NAME");
+    let mut buf = std::io::stdout();
+
+    clap_complete::generate(shell, &mut cmd, bin_name, &mut buf);
 }

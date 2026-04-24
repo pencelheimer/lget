@@ -8,7 +8,10 @@ use std::process::ExitCode;
 use anyhow::Result;
 use clap::Parser as _;
 
-use crate::{args::CliArgs, error::CliError};
+use crate::{
+    args::{CliArgs, Commands},
+    error::CliError,
+};
 
 fn run(args: CliArgs) -> Result<(), CliError> {
     let license = utils::get_license(args.license, args.quiet)?;
@@ -20,6 +23,12 @@ fn run(args: CliArgs) -> Result<(), CliError> {
 
 fn main() -> ExitCode {
     let args = CliArgs::parse();
+
+    if let Some(Commands::Completions { shell }) = args.command {
+        utils::gen_shell_completions(shell);
+        return ExitCode::SUCCESS;
+    }
+
     let quiet = args.quiet;
 
     // NOTE(pencelheimer): unsetting default handler for cliclack
