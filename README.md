@@ -36,3 +36,8 @@ Suppress all output using the quiet flag:
 ```bash
 lget -f -l gpl3 -q
 ```
+
+## TODO
+- Shell completions
+- Man page
+- TLDR page
