@@ -55,12 +55,6 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:base-devel
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          submodules: true
-          fetch-depth: 0
-
       - name: Install dependencies
         run: pacman -Syu --noconfirm git sudo openssh
 
@@ -76,6 +70,12 @@ jobs:
             User aur
             StrictHostKeyChecking accept-new
           EOF
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+          fetch-depth: 0
 
       - name: Update PKGBUILD & Regen .SRCINFO
         run: |
